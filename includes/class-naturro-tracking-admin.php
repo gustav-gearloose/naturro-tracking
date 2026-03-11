@@ -72,6 +72,14 @@ class NaturRo_Tracking_Admin {
             'naturro-tracking-admin',
             'naturro_tracking_rybbit_section'
         );
+
+        add_settings_field(
+            'rybbit_base_url',
+            'Rybbit Base URL',
+            array($this, 'rybbit_base_url_callback'),
+            'naturro-tracking-admin',
+            'naturro_tracking_rybbit_section'
+        );
     }
 
     public function sanitize($input) {
@@ -79,6 +87,7 @@ class NaturRo_Tracking_Admin {
         
         $sanitary_values['enable_rybbit'] = isset($input['enable_rybbit']) ? 1 : 0;
         $sanitary_values['rybbit_site_id'] = isset($input['rybbit_site_id']) ? sanitize_text_field($input['rybbit_site_id']) : '';
+        $sanitary_values['rybbit_base_url'] = isset($input['rybbit_base_url']) ? sanitize_text_field($input['rybbit_base_url']) : 'rybbit.gearloose.dk';
 
         return $sanitary_values;
     }
@@ -102,6 +111,16 @@ class NaturRo_Tracking_Admin {
         $val = isset($options['rybbit_site_id']) ? $options['rybbit_site_id'] : '';
         printf(
             '<input type="text" id="rybbit_site_id" name="%1$s[rybbit_site_id]" value="%2$s" class="regular-text" placeholder="e.g. 4" />',
+            $this->option_name,
+            esc_attr($val)
+        );
+    }
+
+    public function rybbit_base_url_callback() {
+        $options = get_option($this->option_name);
+        $val = isset($options['rybbit_base_url']) ? $options['rybbit_base_url'] : 'rybbit.gearloose.dk';
+        printf(
+            '<input type="text" id="rybbit_base_url" name="%1$s[rybbit_base_url]" value="%2$s" class="regular-text" placeholder="e.g. rybbit.gearloose.dk" />',
             $this->option_name,
             esc_attr($val)
         );

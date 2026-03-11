@@ -50,7 +50,13 @@ class NaturRo_Tracking_Frontend {
     public function output_rybbit_analytics() {
         $enable_rybbit = isset($this->options['enable_rybbit']) ? (bool) $this->options['enable_rybbit'] : true;
         $site_id = isset($this->options['rybbit_site_id']) ? $this->options['rybbit_site_id'] : '';
+        $base_url = isset($this->options['rybbit_base_url']) && !empty($this->options['rybbit_base_url']) 
+            ? $this->options['rybbit_base_url'] 
+            : 'rybbit.gearloose.dk';
         
+        // Strip trailing/leading slashes just in case humans add them
+        $base_url = rtrim(trim($base_url), '/');
+
         // Allow fallback / override via theme filter as requested
         $site_id = apply_filters('naturro_rybbit_site_id', $site_id);
 
@@ -58,8 +64,13 @@ class NaturRo_Tracking_Frontend {
             return;
         }
 
+        // Construct complete URL safely
+        // Assuming HTTPS protocol. If needed, this could also be a setting.
+        $script_url = 'https://' . $base_url . '/api/script.js';
+
         printf(
-            '<script src="https://rybbit.gearloose.dk/api/script.js" data-site-id="%s" defer></script>',
+            '<script src="%s" data-site-id="%s" defer></script>',
+            esc_url($script_url),
             esc_attr($site_id)
         );
     }
