@@ -31,7 +31,7 @@ class NaturRo_Tracking_Admin {
         ?>
         <div class="wrap">
             <h1>NaturRo Tracking Settings</h1>
-            <p>Manage active tracking providers and custom script injections here.</p>
+            <p>Manage active tracking providers and their respective Site IDs.</p>
             <form method="post" action="options.php">
             <?php
                 settings_fields('naturro_tracking_option_group');
@@ -51,69 +51,45 @@ class NaturRo_Tracking_Admin {
         );
 
         add_settings_section(
-            'naturro_tracking_setting_section',
-            'Active Providers',
-            array($this, 'section_info'),
+            'naturro_tracking_rybbit_section',
+            'Rybbit Analytics',
+            array($this, 'rybbit_section_info'),
             'naturro-tracking-admin'
         );
 
         add_settings_field(
             'enable_rybbit',
             'Enable Rybbit',
-            array($this, 'rybbit_callback'),
+            array($this, 'rybbit_toggle_callback'),
             'naturro-tracking-admin',
-            'naturro_tracking_setting_section'
-        );
-
-        add_settings_section(
-            'naturro_tracking_scripts_section',
-            'Custom Scripts',
-            array($this, 'scripts_section_info'),
-            'naturro-tracking-admin'
+            'naturro_tracking_rybbit_section'
         );
 
         add_settings_field(
-            'custom_head_scripts',
-            'Head Scripts (&lt;head&gt;)',
-            array($this, 'head_scripts_callback'),
+            'rybbit_site_id',
+            'Rybbit Site ID',
+            array($this, 'rybbit_site_id_callback'),
             'naturro-tracking-admin',
-            'naturro_tracking_scripts_section'
-        );
-
-        add_settings_field(
-            'custom_body_scripts',
-            'Body Scripts (&lt;body&gt;)',
-            array($this, 'body_scripts_callback'),
-            'naturro-tracking-admin',
-            'naturro_tracking_scripts_section'
+            'naturro_tracking_rybbit_section'
         );
     }
 
     public function sanitize($input) {
         $sanitary_values = array();
         
-        // Rybbit checkbox
         $sanitary_values['enable_rybbit'] = isset($input['enable_rybbit']) ? 1 : 0;
-
-        // Script textareas - WARNING: bypassing sanitization intentionally per spec to allow script tags.
-        // Requires manage_options capability which we enforce at menu registration.
-        $sanitary_values['custom_head_scripts'] = isset($input['custom_head_scripts']) ? $input['custom_head_scripts'] : '';
-        $sanitary_values['custom_body_scripts'] = isset($input['custom_body_scripts']) ? $input['custom_body_scripts'] : '';
+        $sanitary_values['rybbit_site_id'] = isset($input['rybbit_site_id']) ? sanitize_text_field($input['rybbit_site_id']) : '';
 
         return $sanitary_values;
     }
 
-    public function section_info() {
-        echo 'Choose which built-in tracking strategies to enable on the frontend.';
+    public function rybbit_section_info() {
+        echo 'Configure the centralized Rybbit Analytics tracking. If a Site ID is provided, the tracking script will automatically be injected safely into the site footer.';
     }
 
-    public function scripts_section_info() {
-        echo 'Paste raw scripts exactly as they should appear on the frontend (e.g. including &lt;script&gt; tags). <strong>Careful: These scripts run directly on the site.</strong>';
-    }
-
-    public function rybbit_callback() {
+    public function rybbit_toggle_callback() {
         $options = get_option($this->option_name);
-        $val = isset($options['enable_rybbit']) ? $options['enable_rybbit'] : 1; // default to 1 (enabled)
+        $val = isset($options['enable_rybbit']) ? $options['enable_rybbit'] : 1;
         printf(
             '<input type="checkbox" name="%1$s[enable_rybbit]" value="1" %2$s />',
             $this->option_name,
@@ -121,23 +97,13 @@ class NaturRo_Tracking_Admin {
         );
     }
 
-    public function head_scripts_callback() {
+    public function rybbit_site_id_callback() {
         $options = get_option($this->option_name);
-        $val = isset($options['custom_head_scripts']) ? $options['custom_head_scripts'] : '';
+        $val = isset($options['rybbit_site_id']) ? $options['rybbit_site_id'] : '';
         printf(
-            '<textarea class="large-text code" rows="6" name="%1$s[custom_head_scripts]">%2$s</textarea>',
+            '<input type="text" id="rybbit_site_id" name="%1$s[rybbit_site_id]" value="%2$s" class="regular-text" placeholder="e.g. 4" />',
             $this->option_name,
-            esc_textarea($val)
-        );
-    }
-
-    public function body_scripts_callback() {
-        $options = get_option($this->option_name);
-        $val = isset($options['custom_body_scripts']) ? $options['custom_body_scripts'] : '';
-        printf(
-            '<textarea class="large-text code" rows="6" name="%1$s[custom_body_scripts]">%2$s</textarea>',
-            $this->option_name,
-            esc_textarea($val)
+            esc_attr($val)
         );
     }
 }

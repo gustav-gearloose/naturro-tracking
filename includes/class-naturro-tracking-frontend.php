@@ -16,56 +16,51 @@ class NaturRo_Tracking_Frontend {
 
         add_action('wp_enqueue_scripts', array($this, 'enqueue_tracking_scripts'));
         
-        // Output custom scripts
-        add_action('wp_head', array($this, 'output_head_scripts'), 999);
-        add_action('wp_body_open', array($this, 'output_body_scripts'), 1);
-        
-        // Fallback for body scripts if theme lacks wp_body_open
-        add_action('wp_footer', array($this, 'output_body_scripts_fallback'), 999);
+        // Output specific provider scripts
+        add_action('wp_footer', array($this, 'output_rybbit_analytics'), 99);
     }
 
     public function enqueue_tracking_scripts() {
+        // Sequentially load the JS module files to build the architecture
+        $js_dir = NATURRO_TRACKING_PLUGIN_URL . 'assets/js/';
+        
+        wp_enqueue_script('naturro-tracking-strategy', $js_dir . 'strategies/TrackingStrategy.js', array(), NATURRO_TRACKING_VERSION, true);
+        wp_enqueue_script('naturro-tracking-rybbit', $js_dir . 'strategies/RybbitStrategy.js', array('naturro-tracking-strategy'), NATURRO_TRACKING_VERSION, true);
+        wp_enqueue_script('naturro-tracking-manager', $js_dir . 'core/TrackingManager.js', array('naturro-tracking-strategy'), NATURRO_TRACKING_VERSION, true);
+        wp_enqueue_script('naturro-tracking-observer', $js_dir . 'core/TrackingDOMObserver.js', array(), NATURRO_TRACKING_VERSION, true);
+        
+        // Main initialization file depends on all pieces being loaded
         wp_enqueue_script(
-            'naturro-tracking-core',
-            NATURRO_TRACKING_PLUGIN_URL . 'assets/js/tracking-core.js',
-            array(),
+            'naturro-tracking-main',
+            $js_dir . 'main.js',
+            array('naturro-tracking-rybbit', 'naturro-tracking-manager', 'naturro-tracking-observer'),
             NATURRO_TRACKING_VERSION,
             true
         );
 
-        $enable_rybbit = isset($this->options['enable_rybbit']) ? (bool) $this->options['enable_rybbit'] : true; // Default true
+        $enable_rybbit = isset($this->options['enable_rybbit']) ? (bool) $this->options['enable_rybbit'] : true;
 
-        wp_localize_script('naturro-tracking-core', 'naturroTrackingConfig', array(
+        wp_localize_script('naturro-tracking-main', 'naturroTrackingConfig', array(
             'services' => array(
                 'rybbit' => $enable_rybbit
             )
         ));
     }
 
-    public function output_head_scripts() {
-        if (!empty($this->options['custom_head_scripts'])) {
-            echo "\n<!-- NaturRo Tracking Head Scripts -->\n";
-            // Do NOT escape - output raw script intentionally
-            echo $this->options['custom_head_scripts'];
-            echo "\n<!-- End NaturRo Tracking Head Scripts -->\n";
-        }
-    }
+    public function output_rybbit_analytics() {
+        $enable_rybbit = isset($this->options['enable_rybbit']) ? (bool) $this->options['enable_rybbit'] : true;
+        $site_id = isset($this->options['rybbit_site_id']) ? $this->options['rybbit_site_id'] : '';
+        
+        // Allow fallback / override via theme filter as requested
+        $site_id = apply_filters('naturro_rybbit_site_id', $site_id);
 
-    public function output_body_scripts() {
-        if (!empty($this->options['custom_body_scripts'])) {
-            echo "\n<!-- NaturRo Tracking Body Scripts -->\n";
-            echo $this->options['custom_body_scripts'];
-            echo "\n<!-- End NaturRo Tracking Body Scripts -->\n";
-            // Mark as output to avoid printing again in fallback
-            $this->options['_body_scripts_printed'] = true;
+        if (!$enable_rybbit || empty($site_id)) {
+            return;
         }
-    }
 
-    public function output_body_scripts_fallback() {
-        if (!empty($this->options['custom_body_scripts']) && empty($this->options['_body_scripts_printed'])) {
-            echo "\n<!-- NaturRo Tracking Body Scripts (Footer Fallback) -->\n";
-            echo $this->options['custom_body_scripts'];
-            echo "\n<!-- End NaturRo Tracking Body Scripts -->\n";
-        }
+        printf(
+            '<script src="https://rybbit.gearloose.dk/api/script.js" data-site-id="%s" defer></script>',
+            esc_attr($site_id)
+        );
     }
 }
